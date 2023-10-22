@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:sakthi_amma/custom_icons_icons.dart';
 import 'package:sakthi_amma/button_icons_icons.dart';
+import 'package:sakthi_amma/pages/home_page/video_player.dart';
+import '../../models/channel_info.dart';
+import '../../models/videos_list.dart';
+import '../../services/services.dart';
 import 'home_model.dart';
 export 'home_model.dart';
 import '../../flutter_flow/flutter_flow_model.dart';
 import '../../flutter_flow/flutter_flow_theme.dart';
-import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
-import 'package:dot_navigation_bar/dot_navigation_bar.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart'
     as smooth_page_indicator;
 import 'package:awesome_bottom_bar/awesome_bottom_bar.dart';
-import 'package:awesome_bottom_bar/widgets/inspired/inspired.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
@@ -34,14 +37,55 @@ class _MyHomePageState extends State<MyHomePage> {
   int visit = 0;
   var _selectedTab = _SelectedTab.home;
   late HomePageModel _model;
+  List<String> thumbnailUrlList = [];
 
+  late ChannelInfo _channelInfo;
+  late Item _item;
+  late bool _loading;
+  late String _playlistId;
+  late String _nextPageToken;
+  VideosList? _videosList;
+  late ScrollController _scrollController;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
     super.initState();
+    _loading = true;
+    _nextPageToken = '';
+    _scrollController = ScrollController();
+    _getChannelInfo();
     _model = createModel(context, () => HomePageModel());
+  }
+
+  _loadVideos() async {
+    VideosList tempVideosList = await Services.getVideosList(
+        playlistId: _playlistId, pageToken: _nextPageToken);
+    _nextPageToken = tempVideosList.nextPageToken;
+
+    if (_videosList == null) {
+      _videosList = VideosList(
+          kind: tempVideosList.kind,
+          etag: tempVideosList.etag,
+          nextPageToken: tempVideosList.nextPageToken,
+          videos: tempVideosList.videos,
+          pageInfo: tempVideosList.pageInfo);
+    } else {
+      _videosList?.videos.addAll(tempVideosList.videos);
+    }
+    setState(() {});
+  }
+
+  _getChannelInfo() async {
+    _channelInfo = await Services.getChannelInfo();
+    _item = _channelInfo.items[0];
+    _playlistId = _item.contentDetails.relatedPlaylists.uploads;
+
+    await _loadVideos();
+    setState(() {
+      _loading = false;
+    });
   }
 
   @override
@@ -56,324 +100,437 @@ class _MyHomePageState extends State<MyHomePage> {
       _selectedTab = _SelectedTab.values[i];
     });
   }
+
   @override
   Widget build(BuildContext context) {
-
-    
-    return  Scaffold(
-        extendBody: true,
-        key: scaffoldKey,
-        body: SafeArea(
+    return Scaffold(
+      extendBody: true,
+      key: scaffoldKey,
+      body: Stack(
+        children: <Widget>[
+          SafeArea(
           top: true,
           child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.max,
-              children: [
-                SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.max,
-                    children: [
-                      Container(
-                        width: 386.0,
-                        height: 460.0,
-                        decoration: BoxDecoration(
-                          color:
-                              FlutterFlowTheme.of(context).secondaryBackground,
-                        ),
-                        child: Align(
-                          alignment: AlignmentDirectional(-1.00, -1.00),
-                          child: Container(
-                            width: double.infinity,
-                            height: 500.0,
-                            child: Stack(
-                              children: [
-                                PageView(
-                                  controller: _model.pageViewController ??=
-                                      PageController(initialPage: 0),
-                                  scrollDirection: Axis.horizontal,
+                      scrollDirection: Axis.vertical,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.max,
+                        children: [
+                          Container(
+                            width: 386.0,
+                            height: 460.0,
+                            decoration: BoxDecoration(
+                              color:
+                                  FlutterFlowTheme.of(context).secondaryBackground,
+                            ),
+                            child: Align(
+                              alignment: const AlignmentDirectional(-1.00, -1.00),
+                              child: SizedBox(
+                                width: double.infinity,
+                                height: 460.0,
+                                child: Stack(
                                   children: [
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(8.0),
-                                      child: Image.asset('assets/images/img1.png',
-                                                        fit: BoxFit.scaleDown,),
+                                    PageView(
+                                      controller: _model.pageViewController ??=
+                                          PageController(initialPage: 0),
+                                      scrollDirection: Axis.horizontal,
+                                      children: [
+                                        ClipRRect(
+                                          borderRadius: BorderRadius.circular(8.0),
+                                          child: Image.asset(
+                                            'assets/images/img1.png',
+                                            fit: BoxFit.scaleDown,
+                                          ),
+                                        ),
+                                        ClipRRect(
+                                          borderRadius: BorderRadius.circular(8.0),
+                                          child: Image.asset(
+                                            'assets/images/img2.png',
+                                            fit: BoxFit.scaleDown,
+                                          ),
+                                        ),
+                                        ClipRRect(
+                                          borderRadius: BorderRadius.circular(8.0),
+                                          child: Image.asset(
+                                            'assets/images/img4.png',
+                                            fit: BoxFit.scaleDown,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(8.0),
-                                      child: Image.asset('assets/images/img2.png',
-                                                        fit: BoxFit.scaleDown,),
-                                    ),
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(8.0),
-                                      child: Image.asset('assets/images/img4.png',
-                                                        fit: BoxFit.scaleDown,),
+                                    Align(
+                                      alignment: const AlignmentDirectional(0.00, 1.00),
+                                      child: Padding(
+                                        padding: const EdgeInsetsDirectional.fromSTEB(
+                                            16.0, 0.0, 0.0, 16.0),
+                                        child: smooth_page_indicator
+                                            .SmoothPageIndicator(
+                                          controller: _model.pageViewController ??=
+                                              PageController(initialPage: 0),
+                                          count: 3,
+                                          axisDirection: Axis.horizontal,
+                                          onDotClicked: (i) async {
+                                            await _model.pageViewController!
+                                                .animateToPage(
+                                              i,
+                                              duration: const Duration(milliseconds: 500),
+                                              curve: Curves.ease,
+                                            );
+                                          },
+                                          effect: smooth_page_indicator
+                                              .ExpandingDotsEffect(
+                                            expansionFactor: 3.0,
+                                            spacing: 8.0,
+                                            radius: 16.0,
+                                            dotWidth: 16.0,
+                                            dotHeight: 8.0,
+                                            dotColor: FlutterFlowTheme.of(context)
+                                                .accent1,
+                                            activeDotColor:
+                                                FlutterFlowTheme.of(context)
+                                                    .primary,
+                                            paintStyle: PaintingStyle.fill,
+                                          ),
+                                        ),
+                                      ),
                                     ),
                                   ],
                                 ),
-                                Align(
-                                  alignment: AlignmentDirectional(0.00, 1.00),
-                                  child: Padding(
-                                    padding: EdgeInsetsDirectional.fromSTEB(
-                                        16.0, 0.0, 0.0, 16.0),
-                                    child: smooth_page_indicator
-                                        .SmoothPageIndicator(
-                                      controller: _model.pageViewController ??=
-                                          PageController(initialPage: 0),
-                                      count: 3,
-                                      axisDirection: Axis.horizontal,
-                                      onDotClicked: (i) async {
-                                        await _model.pageViewController!
-                                            .animateToPage(
-                                          i,
-                                          duration: Duration(milliseconds: 500),
-                                          curve: Curves.ease,
-                                        );
-                                      },
-                                      effect: smooth_page_indicator
-                                          .ExpandingDotsEffect(
-                                        expansionFactor: 3.0,
-                                        spacing: 8.0,
-                                        radius: 16.0,
-                                        dotWidth: 16.0,
-                                        dotHeight: 8.0,
-                                        dotColor: FlutterFlowTheme.of(context)
-                                            .accent1,
-                                        activeDotColor:
-                                            FlutterFlowTheme.of(context)
-                                                .primary,
-                                        paintStyle: PaintingStyle.fill,
-                                      ),
-                                    ),
-                                  ),
+                              ),
+                            ),
+                          ),
+                          Align(
+                            child: Container(
+                                width: 397.0,
+                                height: 88.0,
+                                decoration: BoxDecoration(
+                                  color: FlutterFlowTheme.of(context)
+                                      .secondaryBackground,
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.max,
+                                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                  children: [
+                                    SizedBox.fromSize(
+                                        size: const Size(66, 66),
+                                        child: ClipOval(
+                                            child: Material(
+                                                color:
+                                                    const Color.fromRGBO(167, 0, 0, 0.4),
+                                                //shadowColor: ,
+                                                //surfaceTintColor: ,
+                                                child: InkWell(
+                                                  splashColor: Colors.black,
+                                                  onTap: () {},
+                                                  child: Column(
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment.center,
+                                                      children: <Widget>[
+                                                        const Icon(ButtonIcons.button1),
+                                                        RichText(
+                                                          text: const TextSpan(
+                                                            text: "About Amma",
+                                                            style: TextStyle(
+                                                                fontSize: 10,
+                                                                color:
+                                                                    Colors.black),
+                                                          ),
+                                                          textAlign:
+                                                              TextAlign.center,
+                                                          softWrap: true,
+                                                        ),
+                                                      ]),
+                                                )))),
+                                    SizedBox.fromSize(
+                                        size: const Size(66, 66),
+                                        child: ClipOval(
+                                            child: Material(
+                                                color: const Color.fromRGBO(
+                                                    255, 189, 89, 0.4),
+                                                //shadowColor: ,
+                                                //surfaceTintColor: ,
+                                                child: InkWell(
+                                                  splashColor: Colors.black,
+                                                  onTap: () {},
+                                                  child: Column(
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment.center,
+                                                      children: <Widget>[
+                                                        const Icon(ButtonIcons.button2),
+                                                        RichText(
+                                                          text: const TextSpan(
+                                                            text: "About Temples",
+                                                            style: TextStyle(
+                                                                fontSize: 10,
+                                                                color:
+                                                                    Colors.black),
+                                                          ),
+                                                          textAlign:
+                                                              TextAlign.center,
+                                                          softWrap: true,
+                                                        ),
+                                                      ]),
+                                                )))),
+                                    SizedBox.fromSize(
+                                        size: const Size(66, 66),
+                                        child: ClipOval(
+                                            child: Material(
+                                                color:
+                                                    const Color.fromRGBO(0, 74, 173, 0.4),
+                                                //shadowColor: ,
+                                                //surfaceTintColor: ,
+                                                child: InkWell(
+                                                  splashColor: Colors.black,
+                                                  onTap: () {},
+                                                  child: Column(
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment.center,
+                                                      children: <Widget>[
+                                                        const Icon(ButtonIcons.button3),
+                                                        RichText(
+                                                          text: const TextSpan(
+                                                            text: "Events",
+                                                            style: TextStyle(
+                                                                fontSize: 10,
+                                                                color:
+                                                                    Colors.black),
+                                                          ),
+                                                          textAlign:
+                                                              TextAlign.center,
+                                                          softWrap: true,
+                                                        ),
+                                                      ]),
+                                                )))),
+                                    SizedBox.fromSize(
+                                        size: const Size(66, 66),
+                                        child: ClipOval(
+                                            child: Material(
+                                                color:
+                                                    const Color.fromRGBO(167, 0, 0, 0.4),
+                                                //shadowColor: ,
+                                                //surfaceTintColor: ,
+                                                child: InkWell(
+                                                  splashColor: Colors.black,
+                                                  onTap: () {},
+                                                  child: Column(
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment.center,
+                                                      children: <Widget>[
+                                                        const Icon(ButtonIcons.button4),
+                                                        RichText(
+                                                          text: const TextSpan(
+                                                            text: "Gallery",
+                                                            style: TextStyle(
+                                                                fontSize: 10,
+                                                                color:
+                                                                    Colors.black),
+                                                          ),
+                                                          textAlign:
+                                                              TextAlign.center,
+                                                          softWrap: true,
+                                                        ),
+                                                      ]),
+                                                )))),
+                                    //ElevatedButton.icon(onPressed: (){}, icon: Icon(ButtonIcons.button1), label: Text("About Amma")),
+                                    //ElevatedButton.icon(onPressed: (){}, icon: Icon(ButtonIcons.button2), label: Text("About Temples")),
+                                    //ElevatedButton.icon(onPressed: (){}, icon: Icon(ButtonIcons.button3), label: Text("Pujas & Events")),
+                                    //ElevatedButton.icon(onPressed: (){}, icon: Icon(ButtonIcons.button4), label: Text("Gallery")),
+                                  ],
+                                )),
+                          ),
+                          Container(
+                            decoration: BoxDecoration(
+                              color:
+                                  FlutterFlowTheme.of(context).secondaryBackground,
+                            ),
+                            child: const Align(
+                              alignment: Alignment.centerLeft,
+                              child: Padding(
+                                padding: EdgeInsets.only(left: 5.0),
+                                child: Text(
+                                  "Videos",
+                                  style: TextStyle(
+                                      fontSize: 20,
+                                      color: Colors.black,
+                                      fontWeight: FontWeight.bold),
+                                  
+                                ),
+                              ),
+                            ),
+                          ),
+                          Container(
+                            width: 386.0,
+                            height: 90,
+                            decoration: BoxDecoration(
+                              color:
+                                  FlutterFlowTheme.of(context).secondaryBackground,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.max,
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                Expanded(
+                                  child: 
+                                  _loading ? SpinKitWave(color: FlutterFlowTheme.of(context).secondary )
+                                    :
+                                     NotificationListener<ScrollEndNotification>(
+                                       onNotification: (ScrollNotification notification){
+                                        if (_videosList!.videos.length >= 
+                                            int.parse(_item.statistics.videoCount)){
+                                              return true;
+                                            }
+                                        if (notification.metrics.pixels == notification.metrics.maxScrollExtent){
+                                          _loadVideos();
+                                        }
+                                        return true;
+                                       },
+                                       child: ListView.builder(
+                                        scrollDirection: Axis.horizontal,
+                                        controller: _scrollController,
+                                        itemBuilder: (context, index) {
+                                          VideoItem videoItem =
+                                              _videosList!.videos[index];
+                                          return InkWell(
+                                            onTap: () async{
+                                              Navigator.push(context, MaterialPageRoute(builder: (context){
+                                                return VideoPlayerScreen(videoItem: videoItem,);
+                                              }));
+                                            },
+                                            child: Container(
+                                                child: Row(
+                                              children: [
+                                                ClipRRect(
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                  child: CachedNetworkImage(
+                                                    imageUrl: videoItem.video.thumbnails
+                                                        .thumbnailsDefault.url,
+                                                  ),
+                                                ),
+                                                const SizedBox(
+                                                  width: 5,
+                                                )
+                                              ],
+                                            )),
+                                          );
+                                        }),
+                                     ),
                                 ),
                               ],
                             ),
                           ),
-                        ),
-                      ),
-                      Align(
-                        child: Container(
-                          width: 397.0,
-                          height: 88.0,
-                          decoration: BoxDecoration(
-                            color: FlutterFlowTheme.of(context)
-                                .secondaryBackground,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.max,
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: [ 
-                              SizedBox.fromSize(
-                                size: Size(66,66),
-                                child: ClipOval(
-                                  child: Material(
-                                    color: Color.fromRGBO(167, 0, 0, 0.4),
-                                    //shadowColor: ,
-                                    //surfaceTintColor: ,
-                                    child: InkWell(
-                                      splashColor: Colors.black,
-                                      onTap: () {}, 
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: <Widget>[
-                                          Icon(ButtonIcons.button1),
-                                          RichText(text: TextSpan(
-                                            text: "About Amma",
-                                            style: TextStyle(fontSize: 10, color: Colors.black),
-                                            
-                                          ),
-                                          textAlign: TextAlign.center,
-                                          softWrap: true,
-                                          ),
-                                        ]),
-                                    )
-                                  )
-                                )
-                              ),
-                              SizedBox.fromSize(
-                                size: Size(66,66),
-                                child: ClipOval(
-                                  child: Material(
-                                    color: Color.fromRGBO(255, 189, 89, 0.4),
-                                    //shadowColor: ,
-                                    //surfaceTintColor: ,
-                                    child: InkWell(
-                                      splashColor: Colors.black,
-                                      onTap: () {}, 
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: <Widget>[
-                                          Icon(ButtonIcons.button2),
-                                          RichText(text: TextSpan(
-                                            text: "About Temples",
-                                            style: TextStyle(fontSize: 10, color: Colors.black),
-                                            
-                                          ),
-                                          textAlign: TextAlign.center,
-                                          softWrap: true,
-                                          ),
-                                        ]),
-                                    )
-                                  )
-                                )
-                              ),
-                              SizedBox.fromSize(
-                                size: Size(66,66),
-                                child: ClipOval(
-                                  child: Material(
-                                    color: Color.fromRGBO(0, 74, 173, 0.4),
-                                    //shadowColor: ,
-                                    //surfaceTintColor: ,
-                                    child: InkWell(
-                                      splashColor: Colors.black,
-                                      onTap: () {}, 
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: <Widget>[
-                                          Icon(ButtonIcons.button3),
-                                          RichText(text: TextSpan(
-                                            text: "Events",
-                                            style: TextStyle(fontSize: 10, color: Colors.black),
-                                            
-                                          ),
-                                          textAlign: TextAlign.center,
-                                          softWrap: true,
-                                          ),
-                                        ]),
-                                    )
-                                  )
-                                )
-                              ),
-                              SizedBox.fromSize(
-                                size: Size(66,66),
-                                child: ClipOval(
-                                  child: Material(
-                                    color: Color.fromRGBO(167, 0, 0, 0.4),
-                                    //shadowColor: ,
-                                    //surfaceTintColor: ,
-                                    child: InkWell(
-                                      splashColor: Colors.black,
-                                      onTap: () {}, 
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: <Widget>[
-                                          Icon(ButtonIcons.button4),
-                                          RichText(text: TextSpan(
-                                            text: "Gallery",
-                                            style: TextStyle(fontSize: 10, color: Colors.black),
-                                            
-                                          ),
-                                          textAlign: TextAlign.center,
-                                          softWrap: true,
-                                          ),
-                                        ]),
-                                    )
-                                  )
-                                )
-                              ),
-                              //ElevatedButton.icon(onPressed: (){}, icon: Icon(ButtonIcons.button1), label: Text("About Amma")),
-                              //ElevatedButton.icon(onPressed: (){}, icon: Icon(ButtonIcons.button2), label: Text("About Temples")),
-                              //ElevatedButton.icon(onPressed: (){}, icon: Icon(ButtonIcons.button3), label: Text("Pujas & Events")),
-                              //ElevatedButton.icon(onPressed: (){}, icon: Icon(ButtonIcons.button4), label: Text("Gallery")),
-                            ],
+                          Container(
+                            width: 386.0,
+                            height: 90,
+                            decoration: BoxDecoration(
+                              color:
+                                  FlutterFlowTheme.of(context).secondaryBackground,
+                            ),
                           )
-                        ),
+                          /*
+                          Align(
+                            child: Container(
+                              width: 397.0,
+                              height: 160.0,
+                              decoration: BoxDecoration(
+                                color: FlutterFlowTheme.of(context)
+                                    .secondaryBackground,
+                              ),
+                              child: Row( 
+                                children: [
+                                  ListView.builder(
+                                  scrollDirection: Axis.horizontal,
+                                  itemBuilder: (context, index){
+                                    VideoItem videoItem = _videosList!.videos[index];
+                                    return Container(
+                                      child : Row(
+                                        children: [
+                                          CachedNetworkImage(imageUrl: videoItem.video.thumbnails.thumbnailsDefault.url,)
+                                        ],
+                                      )
+                                      
+                                    );
+                                  }),
+                                ],
+                              ),
+                            ),
+                            ),
+                            */
+                        ],
                       ),
-                    ],
-                  ),
-                ),
-
-                
-/*                 Container(
-                  width: 403.0,
-                  height: 999.0,
-                  decoration: BoxDecoration(
-                    color: FlutterFlowTheme.of(context).secondaryBackground,
-/*                     image: DecorationImage(image: AssetImage('assets/images/temple.png'),
-                                           fit: BoxFit.cover,
-                                           opacity: 0.70) */
-
-                  ),
-                  child: MasonryGridView.count(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 10.0,
-                    mainAxisSpacing: 10.0,
-                    itemCount: 0,
-                    itemBuilder: (context, index) {
-                      return [][index]();
-                    },
-                  ),
-                ), */
-              ],
-            ),
-          ),
+                    ),
         ),
-      bottomNavigationBar: Container(
-        //padding: EdgeInsets.only(bottom: 10),
-        padding:const EdgeInsets.only(bottom: 30, right: 32, left: 32),
-        child:  BottomBarFloating(
-            backgroundColor: Color.fromRGBO(255, 255, 239, 1),
-            colorSelected: Color.fromRGBO(255, 189, 89, 1),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: bottomNavigationBar())
+        ]
+        ,),
+      );
+      // bottomNavigationBar: DotNavigationBar(
+      //   onTap: (int index) => setState(() {
+      //             visit = index;
+      //           }),
+      //   margin: const EdgeInsets.only(bottom: 30, right: 32, left: 32),
+      //   items: [
+      //         DotNavigationBarItem(icon: Icon( Icons.home, semanticLabel: "Home", )),
+      //         DotNavigationBarItem(icon: Icon( CustomIcons.pujas, semanticLabel: "Pujas")),
+      //         DotNavigationBarItem(icon: Icon(CustomIcons.mantras, semanticLabel: "Mantras")),
+      //         DotNavigationBarItem(icon: Icon( CustomIcons.about, semanticLabel: "About"))
+      //       ],
+      // )
+      
+      // Container(
+      //   //padding: EdgeInsets.only(bottom: 10),
+      //   padding: const EdgeInsets.only(bottom: 30, right: 32, left: 32),
+      //   decoration: new BoxDecoration(
+      //     color: FlutterFlowTheme.of(context).secondaryBackground.withOpacity(0.5)
+      //   ),
+      //   child: BottomBarFloating(
+      //       backgroundColor: Color.fromRGBO(255, 255, 239, 1),
+      //       colorSelected: Color.fromRGBO(255, 189, 89, 1),
+      //       color: Colors.black,
+      //       paddingVertical: 24,
+      //       indexSelected: visit,
+      //       borderRadius: BorderRadius.circular(20),
+      //       //curve: Curve,
+      //       items: [
+      //         TabItem(icon: Icons.home, title: "Home"),
+      //         TabItem(icon: CustomIcons.pujas, title: "Pujas"),
+      //         TabItem(icon: CustomIcons.mantras, title: "Mantras"),
+      //         TabItem(icon: CustomIcons.about, title: "About")
+      //       ],
+      //       onTap: (int index) => setState(() {
+      //             visit = index;
+      //           })),
+      // ),
+  }
+  Widget bottomNavigationBar(){
+    return Container(
+      //padding: const EdgeInsets.only(bottom: 30, right: 32, left: 32),
+      margin: const EdgeInsets.only(left: 16, right: 16),
+      decoration: BoxDecoration(
+          color: FlutterFlowTheme.of(context).secondaryBackground.withOpacity(0.5),
+        ),
+      child: BottomBarFloating(
+            backgroundColor: const Color.fromRGBO(255, 255, 239, 1),
+            colorSelected: const Color.fromRGBO(255, 189, 89, 1),
             color: Colors.black,
-            paddingVertical: 24,
+            paddingVertical: 12,
             indexSelected: visit,
             borderRadius: BorderRadius.circular(20),
             //curve: Curve,
-            items:[
-              TabItem(icon: Icons.home,
-                        title: "Home"),
-              
-              TabItem(icon: CustomIcons.pujas,
-                        title: "Pujas"),
-              TabItem(icon: CustomIcons.mantras,
-                        title: "Mantras"),
-              TabItem(icon: CustomIcons.about,
-                        title: "About")
-              
+            items: const [
+              TabItem(icon: Icons.home, title: "Home"),
+              TabItem(icon: CustomIcons.pujas, title: "Pujas"),
+              TabItem(icon: CustomIcons.mantras, title: "Mantras"),
+              TabItem(icon: CustomIcons.about, title: "About")
             ],
             onTap: (int index) => setState(() {
-                visit = index;
-              })
-          ),
-          /*
-          child: DotNavigationBar(
-            borderRadius: 60,
-            margin: EdgeInsets.only(left: 5, right: 5),
-            currentIndex: _SelectedTab.values.indexOf(_selectedTab),
-            dotIndicatorColor: Colors.white,
-            unselectedItemColor: Colors.grey[300],
-            enableFloatingNavBar: true,
-            onTap: _handleIndexChanged,
-            splashColor: Color.fromARGB(255, 235, 136, 22),
-            items: [
-              /// Home
-              DotNavigationBarItem(
-                icon: Icon(Icons.home, semanticLabel: "Home",),
-                selectedColor: Color(0xff73544C),
-              ),
-        
-              /// Likes
-              DotNavigationBarItem(
-                icon: Icon(CustomIcons.pujas, semanticLabel: "Pujas"),
-                selectedColor: Color(0xff73544C),
-              ),
-        
-              /// Search
-              DotNavigationBarItem(
-                icon: Icon(CustomIcons.mantras, semanticLabel: "Mantras",),
-                selectedColor: Color(0xff73544C),
-              ),
-        
-              /// Profile
-              DotNavigationBarItem(
-                icon: Icon(CustomIcons.about, semanticLabel: "About",),
-                selectedColor: Color(0xff73544C),
-              ),
-            ],
-          ),
-          */
-      ),
-      );
+                  visit = index;
+                })),
+    );
+    
   }
 }
 
